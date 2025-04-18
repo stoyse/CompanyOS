@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='team.css') }}">
+</head>
+<body>
+    <h1>Teammitglieder</h1>
+    <div class="team-container">
+        {% for member in team_members %}
+        <a href="{{ url_for('team_member', username=member['username']) }}" class="team-card-link">
+            <div class="team-card">
+                <img src="{{ url_for('get_avatar', username=member['username']) }}" alt="Avatar">
+                <h3>{{ member['username'] }}</h3>
+                <p>Email: {{ member['email'] }}</p>
+                <p>Rolle: {{ member['role'] }}</p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</body>
+</html>

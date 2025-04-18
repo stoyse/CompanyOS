@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CompanyOS Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+  <div class="dashboard-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2>CompanyOS</h2>
+      <nav>
+        <ul>
+          <li><a href="#">Dashboard</a></li>
+          <li><a href="#">Projects</a></li>
+          <li><a href="#">Tasks</a></li>
+          <li><a href="#">Calendar</a></li>
+          <li><a href="/team">Team</a></li>
+          <li><a href="/settings">Settings</a></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main>
+      <header class="topbar">
+        <input type="text" placeholder="Search..." />
+        <div class="profile">
+          <span class="notification">🔔</span>
+          <img src="/api/avatar/{{ username }}" alt="Avatar" class="avatar">
+        </div>
+      </header>
+
+      <section class="welcome">
+        <h1>Welcome back, {{ username }} 👋</h1>
+      </section>
+
+      <section class="stats">
+        <div class="card">Total Tasks<br><strong>128</strong></div>
+        <div class="card">Completed<br><strong>87</strong></div>
+        <div class="card">Team Members<br><strong>12</strong></div>
+      </section>
+
+      <section class="activity">
+        <h2>Recent Activity</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Task</th><th>User</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Design homepage</td><td>Anna</td><td>Done</td></tr>
+            <tr><td>Fix login bug</td><td>Mark</td><td>In Progress</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

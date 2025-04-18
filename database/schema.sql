@@ -1,0 +1,8 @@
+CREATE TABLE team_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    full_name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    role VARCHAR(50),
+    avatar_url TEXT,
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

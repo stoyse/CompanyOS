@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin-Bereich</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"> <!-- Optional: CSS-Datei -->
+</head>
+<body>
+    <header>
+        <h1>Willkommen im Admin-Bereich</h1>
+    </header>
+    <main>
+        <p>Hallo, {{ username }}! Sie haben Zugriff auf den Admin-Bereich.</p>
+        <ul>
+            <li><a href="{{ url_for('home') }}">Zurück zur Startseite</a></li>
+            <li><a href="{{ url_for('team') }}">Team verwalten</a></li>
+            <!-- Weitere Admin-spezifische Links können hier hinzugefügt werden -->
+        </ul>
+    </main>
+</body>
+</html>

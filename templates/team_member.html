@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ member['username'] }}'s Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='team.css') }}">
+</head>
+<body>
+    <h1>{{ member['username'] }}'s Profile</h1>
+    <div class="team-card">
+        <img src="{{ url_for('get_avatar', username=member['username']) }}" alt="Avatar">
+        <h3>{{ member['username'] }}</h3>
+        <p>Email: {{ member['email'] }}</p>
+        <p>Rolle: {{ member['role'] }}</p>
+    </div>
+    <textarea placeholder="Write something about {{ member['username'] }}..." rows="5" cols="50"></textarea>
+</body>
+</html>

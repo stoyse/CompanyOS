@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Einstellungen</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Einstellungen</h1>
+        <h2>Avatar hochladen</h2>
+        <form action="{{ url_for('upload_avatar') }}" method="POST" enctype="multipart/form-data">
+            <label for="avatar">Avatar auswählen:</label>
+            <input type="file" name="avatar" id="avatar" accept="image/png, image/jpeg" required>
+            <button type="submit">Hochladen</button>
+        </form>
+
+        <h2>Passwort ändern</h2>
+        <form action="{{ url_for('change_password') }}" method="POST">
+            <label for="current_password">Aktuelles Passwort:</label>
+            <input type="password" name="current_password" id="current_password" required>
+            <label for="new_password">Neues Passwort:</label>
+            <input type="password" name="new_password" id="new_password" required>
+            <button type="submit">Passwort ändern</button>
+        </form>
+    </div>
+</body>
+</html>
