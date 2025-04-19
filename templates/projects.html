@@ -2,18 +2,17 @@
 
 {% block sidebar_home %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
 
-{% block sidebar_team %}bg-blue-50 text-blue-700{% endblock %}
+{% block sidebar_team %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
 
 {% block sidebar_calendar %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
 
-{% block sidebar_projects %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+{% block sidebar_projects %}bg-blue-50 text-blue-700{% endblock %}
 
 {% block sidebar_reports %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
 
-
 {% block content %}
 <h1 class="text-2xl font-bold mb-4">Teammitglieder</h1>
-<div class="team-container grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+<div class="team-container grid grid-cols-3 gap-4">
     {% for member in team_members %}
     <a href="{{ url_for('team_member', username=member['username']) }}" class="team-card-link block p-4 bg-gray-100 rounded shadow hover:bg-gray-200">
         <div class="team-card text-center">

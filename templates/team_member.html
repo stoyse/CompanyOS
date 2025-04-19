@@ -1,19 +1,176 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ member['username'] }}'s Profile</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='team.css') }}">
-</head>
-<body>
-    <h1>{{ member['username'] }}'s Profile</h1>
-    <div class="team-card">
-        <img src="{{ url_for('get_avatar', username=member['username']) }}" alt="Avatar">
-        <h3>{{ member['username'] }}</h3>
-        <p>Email: {{ member['email'] }}</p>
-        <p>Rolle: {{ member['role'] }}</p>
+{% extends "test/base.html" %}
+
+{% block sidebar_home %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+
+{% block sidebar_team %}bg-blue-50 text-blue-700{% endblock %}
+
+{% block sidebar_calendar %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+
+{% block sidebar_projects %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+
+{% block sidebar_reports %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">{{ member['username'] }}'s Profile</h1>
+<div class="team-card p-4 bg-gray-100 rounded shadow text-center">
+    <img src="{{ url_for('get_avatar', username=member['username']) }}" alt="Avatar" class="w-24 h-24 rounded-full mx-auto mb-2">
+    <h3 class="text-lg font-semibold">{{ member['username'] }}</h3>
+    <p class="text-sm">Email: {{ member['email'] }}</p>
+    <p class="text-sm">Rolle: {{ member['role'] }}</p>
+</div>
+<div class="chat-section mt-6">
+    <h2 class="text-xl font-bold mb-2">Chat with {{ member['username'] }}</h2>
+    <div id="chat-box" class="border p-4 h-64 overflow-y-auto bg-white rounded" data-username="{{ member['username'] }}" data-currentuser="{{ username }}">
+        <!-- Chat messages will be dynamically loaded here -->
     </div>
-    <textarea placeholder="Write something about {{ member['username'] }}..." rows="5" cols="50"></textarea>
-</body>
-</html>
+    <div class="mt-4 flex items-center">
+        <input type="text" id="chat-input" placeholder="Type your message..." class="flex-grow border rounded-l p-2">
+        <label for="file-input" class="cursor-pointer bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4">
+            📎
+        </label>
+        <input type="file" id="file-input" class="hidden">
+        <button id="send-button" class="bg-blue-500 text-white px-4 py-2 rounded-r">Send</button>
+    </div>
+    <div id="upload-status" class="text-sm text-gray-500 mt-1"></div>
+</div>
+
+<!-- Füge Socket.IO hinzu -->
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const chatBox = document.getElementById("chat-box");
+    const chatInput = document.getElementById("chat-input");
+    const sendButton = document.getElementById("send-button");
+    const fileInput = document.getElementById("file-input");
+    const uploadStatus = document.getElementById("upload-status");
+    const recipient = chatBox.dataset.username;
+    const currentUser = chatBox.dataset.currentuser;
+
+    const socket = io();
+
+    socket.on('connect', () => {
+        console.log('Socket.IO connected');
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Socket.IO disconnected');
+    });
+
+    function addMessageToBox(msg) {
+        const messageDiv = document.createElement("div");
+        const isCurrentUserSender = msg.sender === currentUser;
+        messageDiv.className = isCurrentUserSender ? "text-right mb-2" : "text-left mb-2";
+
+        let messageContentHtml;
+        if (msg.message_type === 'file' && msg.file_url) {
+            messageContentHtml = `
+                <a href="${msg.file_url}" target="_blank" class="underline text-blue-600 hover:text-blue-800">
+                    📄 ${msg.content}
+                </a>`;
+        } else {
+            messageContentHtml = msg.content;
+        }
+
+        messageDiv.innerHTML = `
+            <span class="inline-block px-3 py-2 rounded ${isCurrentUserSender ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}">
+                ${!isCurrentUserSender ? `<strong>${msg.sender}</strong>:<br>` : ''}
+                ${messageContentHtml}
+            </span>
+        `;
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function loadChatHistory() {
+        fetch(`/chat/${recipient}`)
+            .then(response => response.json())
+            .then(messages => {
+                chatBox.innerHTML = "";
+                messages.forEach(msg => {
+                    addMessageToBox(msg);
+                });
+            })
+            .catch(error => console.error('Error loading chat history:', error));
+    }
+
+    function sendTextMessage() {
+        const content = chatInput.value.trim();
+        if (content === "") return;
+
+        const messageData = {
+            recipient: recipient,
+            message: content,
+            message_type: 'text'
+        };
+        socket.emit('send_message', messageData);
+        chatInput.value = "";
+    }
+
+    function sendFileMessage(filename, fileUrl) {
+        const messageData = {
+            recipient: recipient,
+            message: filename,
+            message_type: 'file',
+            file_url: fileUrl
+        };
+        socket.emit('send_message', messageData);
+        uploadStatus.textContent = "";
+    }
+
+    async function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        uploadStatus.textContent = `Uploading ${file.name}...`;
+
+        try {
+            const response = await fetch('/upload_chat_file', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log('Upload successful:', result);
+            uploadStatus.textContent = `Upload complete: ${result.filename}`;
+            sendFileMessage(result.filename, result.file_url);
+
+        } catch (error) {
+            console.error('Upload failed:', error);
+            uploadStatus.textContent = `Upload failed: ${error.message}`;
+        } finally {
+            setTimeout(() => { uploadStatus.textContent = ""; }, 3000);
+        }
+    }
+
+    socket.on('receive_message', (msg) => {
+        console.log("Message received:", msg);
+        if ((msg.sender === currentUser && msg.recipient === recipient) || (msg.sender === recipient && msg.recipient === currentUser)) {
+             addMessageToBox(msg);
+        }
+    });
+
+    sendButton.addEventListener("click", sendTextMessage);
+
+    chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendTextMessage();
+        }
+    });
+
+    fileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            uploadFile(file);
+        }
+        e.target.value = null;
+    });
+
+    loadChatHistory();
+});
+</script>
+
+{% endblock %}

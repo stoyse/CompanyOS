@@ -1,29 +1,32 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Einstellungen</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>Einstellungen</h1>
-        <h2>Avatar hochladen</h2>
-        <form action="{{ url_for('upload_avatar') }}" method="POST" enctype="multipart/form-data">
-            <label for="avatar">Avatar auswählen:</label>
-            <input type="file" name="avatar" id="avatar" accept="image/png, image/jpeg" required>
-            <button type="submit">Hochladen</button>
-        </form>
+{% extends "test/base.html" %}
 
-        <h2>Passwort ändern</h2>
-        <form action="{{ url_for('change_password') }}" method="POST">
-            <label for="current_password">Aktuelles Passwort:</label>
-            <input type="password" name="current_password" id="current_password" required>
-            <label for="new_password">Neues Passwort:</label>
-            <input type="password" name="new_password" id="new_password" required>
-            <button type="submit">Passwort ändern</button>
-        </form>
-    </div>
-</body>
-</html>
+{% block sidebar_home %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+
+{% block sidebar_team %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+
+{% block sidebar_calendar %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+
+{% block sidebar_projects %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+
+{% block sidebar_reports %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+{% block content %}
+<div class="container">
+    <h1 class="text-2xl font-bold mb-4">Einstellungen</h1>
+    
+    <h2 class="text-xl font-semibold mb-2">Avatar hochladen</h2>
+    <form action="{{ url_for('upload_avatar') }}" method="POST" enctype="multipart/form-data" class="mb-6">
+        <label for="avatar" class="block mb-1">Avatar auswählen:</label>
+        <input type="file" name="avatar" id="avatar" accept="image/png, image/jpeg" required class="mb-2">
+        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded">Hochladen</button>
+    </form>
+
+    <h2 class="text-xl font-semibold mb-2">Passwort ändern</h2>
+    <form action="{{ url_for('change_password') }}" method="POST">
+        <label for="current_password" class="block mb-1">Aktuelles Passwort:</label>
+        <input type="password" name="current_password" id="current_password" required class="mb-2">
+        <label for="new_password" class="block mb-1">Neues Passwort:</label>
+        <input type="password" name="new_password" id="new_password" required class="mb-2">
+        <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded">Passwort ändern</button>
+    </form>
+</div>
+{% endblock %}

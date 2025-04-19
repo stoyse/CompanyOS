@@ -87,3 +87,27 @@ def update_user_password(username, new_password):
     conn.commit()
     conn.close()
     return True
+
+
+def save_message(sender, recipient, content, message_type='text', file_url=None):
+    conn = get_db_connection()
+    conn.execute(
+        'INSERT INTO chat_messages (sender, recipient, content, message_type, file_url) VALUES (?, ?, ?, ?, ?)',
+        (sender, recipient, content, message_type, file_url)
+    )
+    conn.commit()
+    conn.close()
+
+def get_messages_between(user1, user2):
+    conn = get_db_connection()
+    messages = conn.execute(
+        '''
+        SELECT id, sender, recipient, content, message_type, file_url, timestamp FROM chat_messages
+        WHERE (sender = ? AND recipient = ?)
+           OR (sender = ? AND recipient = ?)
+        ORDER BY id ASC
+        ''',
+        (user1, user2, user2, user1)
+    ).fetchall()
+    conn.close()
+    return messages

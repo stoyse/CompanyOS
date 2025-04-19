@@ -5,20 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CompanyOS Dashboard</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
   <div class="dashboard-container">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <h2>CompanyOS</h2>
+      <h2><i class="fas fa-building"></i> CompanyOS</h2>
       <nav>
         <ul>
-          <li><a href="#">Dashboard</a></li>
-          <li><a href="#">Projects</a></li>
-          <li><a href="#">Tasks</a></li>
-          <li><a href="#">Calendar</a></li>
-          <li><a href="/team">Team</a></li>
-          <li><a href="/settings">Settings</a></li>
+          <li><a href="#"><i class="fas fa-home"></i> Dashboard</a></li>
+          <li><a href="#"><i class="fas fa-folder"></i> Projects</a></li>
+          <li><a href="#"><i class="fas fa-tasks"></i> Tasks</a></li>
+          <li><a href="#"><i class="fas fa-calendar-alt"></i> Calendar</a></li>
+          <li><a href="/team"><i class="fas fa-users"></i> Team</a></li>
+          <li><a href="/settings"><i class="fas fa-cog"></i> Settings</a></li>
         </ul>
       </nav>
     </aside>
@@ -26,9 +27,12 @@
     <!-- Main content -->
     <main>
       <header class="topbar">
-        <input type="text" placeholder="Search..." />
+        <div class="search-bar">
+          <input type="text" placeholder="Search..." />
+          <button><i class="fas fa-search"></i></button>
+        </div>
         <div class="profile">
-          <span class="notification">🔔</span>
+          <span class="notification"><i class="fas fa-bell"></i></span>
           <img src="/api/avatar/{{ username }}" alt="Avatar" class="avatar">
         </div>
       </header>
@@ -38,13 +42,13 @@
       </section>
 
       <section class="stats">
-        <div class="card">Total Tasks<br><strong>128</strong></div>
-        <div class="card">Completed<br><strong>87</strong></div>
-        <div class="card">Team Members<br><strong>12</strong></div>
+        <div class="card"><i class="fas fa-tasks"></i> Total Tasks<br><strong>128</strong></div>
+        <div class="card"><i class="fas fa-check-circle"></i> Completed<br><strong>87</strong></div>
+        <div class="card"><i class="fas fa-users"></i> Team Members<br><strong>12</strong></div>
       </section>
 
       <section class="activity">
-        <h2>Recent Activity</h2>
+        <h2><i class="fas fa-stream"></i> Recent Activity</h2>
         <table>
           <thead>
             <tr>
@@ -52,8 +56,8 @@
             </tr>
           </thead>
           <tbody>
-            <tr><td>Design homepage</td><td>Anna</td><td>Done</td></tr>
-            <tr><td>Fix login bug</td><td>Mark</td><td>In Progress</td></tr>
+            <tr><td>Design homepage</td><td>Anna</td><td><i class="fas fa-check"></i> Done</td></tr>
+            <tr><td>Fix login bug</td><td>Mark</td><td><i class="fas fa-spinner"></i> In Progress</td></tr>
           </tbody>
         </table>
       </section>
