@@ -17,18 +17,22 @@
     <p class="text-sm">Email: {{ member['email'] }}</p>
     <p class="text-sm">Rolle: {{ member['role'] }}</p>
 </div>
-<div class="chat-section mt-6">
+<div class="chat-section mt-6 relative">
     <h2 class="text-xl font-bold mb-2">Chat with {{ member['username'] }}</h2>
     <div id="chat-box" class="border p-4 h-64 overflow-y-auto bg-white rounded" data-username="{{ member['username'] }}" data-currentuser="{{ username }}">
         <!-- Chat messages will be dynamically loaded here -->
     </div>
     <div class="mt-4 flex items-center">
-        <input type="text" id="chat-input" placeholder="Type your message..." class="flex-grow border rounded-l p-2">
+        <input type="text" id="chat-input" placeholder="Type your message... (mention tasks with @task:ID)" class="flex-grow border rounded-l p-2">
         <label for="file-input" class="cursor-pointer bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4">
             📎
         </label>
         <input type="file" id="file-input" class="hidden">
         <button id="send-button" class="bg-blue-500 text-white px-4 py-2 rounded-r">Send</button>
+    </div>
+    <!-- Autocomplete Dropdown -->
+    <div id="autocomplete-list" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 hidden max-h-40 overflow-y-auto">
+        <!-- Autocomplete items will be added here -->
     </div>
     <div id="upload-status" class="text-sm text-gray-500 mt-1"></div>
 </div>
@@ -42,10 +46,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const sendButton = document.getElementById("send-button");
     const fileInput = document.getElementById("file-input");
     const uploadStatus = document.getElementById("upload-status");
+    const autocompleteList = document.getElementById("autocomplete-list");
     const recipient = chatBox.dataset.username;
     const currentUser = chatBox.dataset.currentuser;
+    let tasks = {};
+    let taskArray = [];
 
     const socket = io();
+
+    // Fetch tasks when the page loads
+    function loadTasks() {
+        fetch('/api/tasks/list')
+            .then(response => response.json())
+            .then(data => {
+                taskArray = data.map(task => ({
+                    id: task.id,
+                    title: task.title,
+                    description: task.description || 'No description available',
+                    due_date: task.due_date || 'No due date'
+                }));
+                tasks = taskArray.reduce((acc, task) => {
+                    acc[task.id] = task;
+                    return acc;
+                }, {});
+                console.log("Tasks loaded:", tasks);
+            })
+            .catch(error => console.error('Error loading tasks:', error));
+    }
 
     socket.on('connect', () => {
         console.log('Socket.IO connected');
@@ -55,6 +82,27 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log('Socket.IO disconnected');
     });
 
+    // Function to parse message content for task mentions
+    function parseMessageContent(content) {
+        const taskMentionRegex = /@task:(\d+)/g;
+        return content.replace(taskMentionRegex, (match, taskId) => {
+            const taskIdNum = parseInt(taskId, 10);
+            const task = taskArray.find(t => t.id === taskIdNum);
+            if (task) {
+                return `
+                    <div class="border rounded p-3 bg-gray-100 shadow-sm mb-2">
+                        <h3 class="font-bold text-lg text-blue-700">
+                            <a href="/tasks/${taskIdNum}" target="_blank" class="hover:underline">${task.title}</a>
+                        </h3>
+                        <p class="text-sm text-gray-700">${task.description || 'No description available'}</p>
+                        <p class="text-xs text-gray-500">Due: ${task.due_date || 'No due date'}</p>
+                    </div>`;
+            } else {
+                return match;
+            }
+        });
+    }
+
     function addMessageToBox(msg) {
         const messageDiv = document.createElement("div");
         const isCurrentUserSender = msg.sender === currentUser;
@@ -62,12 +110,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let messageContentHtml;
         if (msg.message_type === 'file' && msg.file_url) {
+            const parsedFilename = parseMessageContent(msg.content);
             messageContentHtml = `
                 <a href="${msg.file_url}" target="_blank" class="underline text-blue-600 hover:text-blue-800">
-                    📄 ${msg.content}
+                    📄 ${parsedFilename}
                 </a>`;
         } else {
-            messageContentHtml = msg.content;
+            messageContentHtml = parseMessageContent(msg.content);
         }
 
         messageDiv.innerHTML = `
@@ -103,6 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         socket.emit('send_message', messageData);
         chatInput.value = "";
+        autocompleteList.classList.add('hidden');
     }
 
     function sendFileMessage(filename, fileUrl) {
@@ -145,6 +195,63 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // --- Autocomplete Logic ---
+    chatInput.addEventListener('input', () => {
+        const text = chatInput.value;
+        const cursorPos = chatInput.selectionStart;
+        const textBeforeCursor = text.substring(0, cursorPos);
+        const atIndex = textBeforeCursor.lastIndexOf('@');
+
+        if (atIndex === -1 || (atIndex > 0 && textBeforeCursor[atIndex - 1] !== ' ')) {
+            autocompleteList.classList.add('hidden');
+            return;
+        }
+
+        const query = textBeforeCursor.substring(atIndex + 1).toLowerCase();
+
+        const filteredTasks = taskArray.filter(task =>
+            task.title.toLowerCase().includes(query)
+        );
+
+        if (filteredTasks.length > 0) {
+            autocompleteList.innerHTML = '';
+            filteredTasks.forEach(task => {
+                const item = document.createElement('div');
+                item.classList.add('p-2', 'hover:bg-gray-100', 'cursor-pointer');
+                item.textContent = `Task ${task.id}: ${task.title}`;
+                item.addEventListener('click', () => {
+                    const mention = `@task:${task.id} `;
+                    const newText = text.substring(0, atIndex) + mention + text.substring(cursorPos);
+                    chatInput.value = newText;
+                    autocompleteList.classList.add('hidden');
+                    chatInput.focus();
+                    const newCursorPos = atIndex + mention.length;
+                    chatInput.setSelectionRange(newCursorPos, newCursorPos);
+                });
+                autocompleteList.appendChild(item);
+            });
+            autocompleteList.classList.remove('hidden');
+        } else {
+            autocompleteList.classList.add('hidden');
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!chatInput.contains(e.target) && !autocompleteList.contains(e.target)) {
+            autocompleteList.classList.add('hidden');
+        }
+    });
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            autocompleteList.classList.add('hidden');
+        }
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendTextMessage();
+        }
+    });
+    // --- End Autocomplete Logic ---
+
     socket.on('receive_message', (msg) => {
         console.log("Message received:", msg);
         if ((msg.sender === currentUser && msg.recipient === recipient) || (msg.sender === recipient && msg.recipient === currentUser)) {
@@ -154,13 +261,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sendButton.addEventListener("click", sendTextMessage);
 
-    chatInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendTextMessage();
-        }
-    });
-
     fileInput.addEventListener("change", (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -169,6 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
         e.target.value = null;
     });
 
+    loadTasks();
     loadChatHistory();
 });
 </script>

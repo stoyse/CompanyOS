@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from auth import login_user, register_user, User
 from flask_login import login_required, LoginManager, UserMixin, current_user
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from db import save_message, get_messages_between, delete_task, update_task_status, update_task
+from db import save_message, get_messages_between, delete_task, update_task_status, update_task, get_task_titles
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
@@ -334,7 +334,28 @@ def profile():
     if not user_profile:
         flash('Profilinformationen konnten nicht geladen werden.', 'danger')
         return redirect(url_for('home'))
+    user_profile = dict(user_profile)
+    user_profile['username'] = current_user.username
     return render_template('profile.html', profile=user_profile, username=current_user.username)
+
+@app.route('/api/tasks/list', methods=['GET'])
+@login_required
+def api_get_task_list():
+    """
+    Gibt eine Liste aller Aufgaben mit IDs, Titeln, Beschreibungen und Fälligkeitsdaten zurück.
+    """
+    from db import get_all_tasks
+    tasks = get_all_tasks()
+    task_list = [
+        {
+            'id': task['id'],
+            'title': task['title'],
+            'description': task['description'],
+            'due_date': task['due_date']
+        }
+        for task in tasks
+    ]
+    return jsonify(task_list)
 
 @socketio.on('connect')
 @login_required

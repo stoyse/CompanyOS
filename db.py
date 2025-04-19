@@ -124,13 +124,23 @@ def get_all_tasks():
     conn = get_db_connection()
     query = """
         SELECT tasks.id AS id, tasks.title, tasks.description, tasks.status, tasks.priority, tasks.due_date, 
-               team_members.full_name AS assigned_to
+               team_members.full_name AS assigned_to, tasks.assigned_to AS assigned_to_id
         FROM tasks
         LEFT JOIN team_members ON tasks.assigned_to = team_members.id
-    """  # Füge tasks.id explizit als 'id' hinzu
+    """  # Füge tasks.assigned_to explizit als 'assigned_to_id' hinzu
     rows = conn.execute(query).fetchall()
     conn.close()
     # Konvertiere die Ergebnisse in eine Liste von Dictionaries
+    return [dict(row) for row in rows]
+
+def get_task_titles():
+    """
+    Ruft IDs und Titel aller Aufgaben ab.
+    """
+    conn = get_db_connection()
+    query = "SELECT id, title FROM tasks"
+    rows = conn.execute(query).fetchall()
+    conn.close()
     return [dict(row) for row in rows]
 
 def create_task(title, description, status, priority, due_date, assigned_to):
