@@ -63,11 +63,11 @@ def create_team_member(full_name, email, role, avatar_url=None):
 
 def get_all_team_members():
     conn = get_db_connection()
-    query = "SELECT full_name, email, role FROM team_members"  # Abfrage für Teammitglieder
+    query = "SELECT id, full_name, email, role FROM team_members"  # Füge 'id' zur Abfrage hinzu
     rows = conn.execute(query).fetchall()
     conn.close()
-    # Konvertiere die Ergebnisse in eine Liste von Dictionaries
-    return [{'username': row['full_name'], 'email': row['email'], 'role': row['role']} for row in rows]
+    # Konvertiere die Ergebnisse in eine Liste von Dictionaries, einschließlich der ID
+    return [{'id': row['id'], 'username': row['full_name'], 'email': row['email'], 'role': row['role']} for row in rows]
 
 def get_avatar_by_username(username):
     # Beispiel: Abrufen des Avatars aus einer Datenbank oder einem Speicher
@@ -111,3 +111,100 @@ def get_messages_between(user1, user2):
     ).fetchall()
     conn.close()
     return messages
+
+def get_user_profile(username):
+    # Beispiel: Datenbankabfrage, um Benutzerprofilinformationen abzurufen
+    query = "SELECT full_name, email, role, joined_at FROM team_members WHERE full_name = ?"
+    conn = get_db_connection()
+    result = conn.execute(query, (username,)).fetchone()
+    conn.close()
+    return dict(result) if result else None
+
+def get_all_tasks():
+    conn = get_db_connection()
+    query = """
+        SELECT tasks.id AS id, tasks.title, tasks.description, tasks.status, tasks.priority, tasks.due_date, 
+               team_members.full_name AS assigned_to
+        FROM tasks
+        LEFT JOIN team_members ON tasks.assigned_to = team_members.id
+    """  # Füge tasks.id explizit als 'id' hinzu
+    rows = conn.execute(query).fetchall()
+    conn.close()
+    # Konvertiere die Ergebnisse in eine Liste von Dictionaries
+    return [dict(row) for row in rows]
+
+def create_task(title, description, status, priority, due_date, assigned_to):
+    conn = get_db_connection()
+    try:
+        print(f"Attempting to insert task: title={title}, description={description}, status={status}, priority={priority}, due_date={due_date}, assigned_to={assigned_to}")  # Debugging-Ausgabe
+        conn.execute(
+            '''
+            INSERT INTO tasks (title, description, status, priority, due_date, assigned_to)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ''',
+            (title, description, status, priority, due_date, assigned_to)
+        )
+        conn.commit()
+        print("Task successfully inserted into database.")  # Debugging-Ausgabe
+    except Exception as e:
+        print(f"Error inserting task into database: {e}")  # Debugging-Ausgabe
+    finally:
+        conn.close()
+
+def delete_task(task_id):
+    """
+    Löscht eine Aufgabe basierend auf der ID.
+    """
+    conn = get_db_connection()
+    try:
+        conn.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+        conn.commit()
+        print(f"Task {task_id} successfully deleted.")  # Debugging-Ausgabe
+    except Exception as e:
+        print(f"Error deleting task {task_id}: {e}")  # Debugging-Ausgabe
+    finally:
+        conn.close()
+
+def update_task_status(task_id, new_status):
+    """
+    Aktualisiert den Status einer Aufgabe basierend auf der ID.
+    """
+    conn = get_db_connection()
+    try:
+        conn.execute('UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', (new_status, task_id)) # Add updated_at
+        conn.commit()
+        print(f"Task {task_id} status updated to {new_status}.")  # Debugging-Ausgabe
+    except Exception as e:
+        print(f"Error updating task {task_id} status: {e}")  # Debugging-Ausgabe
+    finally:
+        conn.close()
+
+def update_task(task_id, title, description, status, priority, due_date, assigned_to):
+    """
+    Aktualisiert alle Felder einer Aufgabe basierend auf der ID.
+    """
+    conn = get_db_connection()
+    try:
+        # Stelle sicher, dass assigned_to ein Integer ist oder NULL, falls leer
+        assigned_to_id = int(assigned_to) if assigned_to else None
+
+        print(f"Updating task {task_id}: title={title}, desc={description}, status={status}, prio={priority}, due={due_date}, assigned={assigned_to_id}") # Debugging
+        conn.execute(
+            '''
+            UPDATE tasks
+            SET title = ?, description = ?, status = ?, priority = ?, due_date = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            ''',
+            (title, description, status, priority, due_date, assigned_to_id, task_id)
+        )
+        conn.commit()
+        print(f"Task {task_id} successfully updated.") # Debugging
+        return True
+    except ValueError:
+        print(f"Error updating task {task_id}: Invalid assigned_to value '{assigned_to}'. Must be an integer or empty.") # Debugging
+        return False
+    except Exception as e:
+        print(f"Error updating task {task_id}: {e}") # Debugging
+        return False
+    finally:
+        conn.close()

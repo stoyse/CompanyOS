@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block sidebar_home %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+{% block sidebar_team %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+{% block sidebar_calendar %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+{% block sidebar_projects %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+{% block sidebar_reports %}text-gray-500 hover:bg-gray-50 hover:text-gray-700{% endblock %}
+{% block sidebar_tasks %}bg-blue-50 text-blue-700{% endblock %}
+
+{% block title %}Aufgaben{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg p-6">
+    <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-semibold text-gray-800">Aufgaben</h1>
+        <button onclick="toggleNewTaskModal()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Neue Aufgabe</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for task in tasks %}
+        <div class="p-4 bg-gray-100 rounded shadow">
+            <h2 class="text-lg font-semibold text-gray-700">{{ task.title }}</h2>
+            <p class="text-sm text-gray-500">{{ task.description }}</p>
+            <p class="text-sm text-gray-500"><strong>Status:</strong> {{ task.status }}</p>
+            <p class="text-sm text-gray-500"><strong>Priorität:</strong> {{ task.priority }}</p>
+            <p class="text-sm text-gray-500"><strong>Fälligkeitsdatum:</strong> {{ task.due_date }}</p>
+            <p class="text-sm text-gray-500"><strong>Zugewiesen an:</strong> {{ task.assigned_to }}</p>
+            <div class="mt-4 flex space-x-2">
+                <button onclick="openEditModal({{ task.id }}, '{{ task.title | e }}', '{{ task.description | e }}', '{{ task.status }}', '{{ task.priority }}', '{{ task.due_date }}', '{{ task.assigned_to_id | default('') }}')"
+                        class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">Bearbeiten</button>
+                <form method="POST" action="{{ url_for('delete_task_route', task_id=task.id) }}" style="display: inline;">
+                    <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Löschen</button>
+                </form>
+            </div>
+            <form method="POST" action="{{ url_for('update_task_status_route', task_id=task.id) }}" class="mt-4">
+                <label for="status_{{ task.id }}" class="block text-sm font-medium text-gray-700">Status ändern</label>
+                <select id="status_{{ task.id }}" name="status" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="To Do" {% if task.status == "To Do" %}selected{% endif %}>To Do</option>
+                    <option value="In Progress" {% if task.status == "In Progress" %}selected{% endif %}>In Progress</option>
+                    <option value="Done" {% if task.status == "Done" %}selected{% endif %}>Done</option>
+                </select>
+                <button type="submit" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Speichern</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- New Task Modal -->
+<div id="newTaskModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Neue Aufgabe erstellen</h2>
+        <form id="newTaskForm" method="POST" action="{{ url_for('tasks') }}" class="space-y-4">
+            <div>
+                <label for="title" class="block text-sm font-medium text-gray-700">Titel</label>
+                <input type="text" id="title" name="title" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+                <label for="description" class="block text-sm font-medium text-gray-700">Beschreibung</label>
+                <textarea id="description" name="description" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+            </div>
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+                <select id="status" name="status" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Done">Done</option>
+                </select>
+            </div>
+            <div>
+                <label for="priority" class="block text-sm font-medium text-gray-700">Priorität</label>
+                <select id="priority" name="priority" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+            </div>
+            <div>
+                <label for="due_date" class="block text-sm font-medium text-gray-700">Fälligkeitsdatum</label>
+                <input type="date" id="due_date" name="due_date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+                <label for="assigned_to" class="block text-sm font-medium text-gray-700">Zugewiesen an</label>
+                <select id="assigned_to" name="assigned_to" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="" disabled selected>Bitte wählen...</option>
+                    {% for member in team_members %}
+                    <option value="{{ member['id'] }}">{{ member['username'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button type="button" onclick="toggleNewTaskModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">Abbrechen</button>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Erstellen</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div id="editTaskModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Aufgabe bearbeiten</h2>
+        <form id="editTaskForm" method="POST" action="" class="space-y-4">
+            <input type="hidden" id="edit_task_id" name="task_id">
+            <div>
+                <label for="edit_title" class="block text-sm font-medium text-gray-700">Titel</label>
+                <input type="text" id="edit_title" name="title" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+                <label for="edit_description" class="block text-sm font-medium text-gray-700">Beschreibung</label>
+                <textarea id="edit_description" name="description" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+            </div>
+            <div>
+                <label for="edit_status" class="block text-sm font-medium text-gray-700">Status</label>
+                <select id="edit_status" name="status" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Done">Done</option>
+                </select>
+            </div>
+            <div>
+                <label for="edit_priority" class="block text-sm font-medium text-gray-700">Priorität</label>
+                <select id="edit_priority" name="priority" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+            </div>
+            <div>
+                <label for="edit_due_date" class="block text-sm font-medium text-gray-700">Fälligkeitsdatum</label>
+                <input type="date" id="edit_due_date" name="due_date" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+                <label for="edit_assigned_to" class="block text-sm font-medium text-gray-700">Zugewiesen an</label>
+                <select id="edit_assigned_to" name="assigned_to" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <option value="" disabled>Bitte wählen...</option>
+                    {% for member in team_members %}
+                    <option value="{{ member['id'] }}">{{ member['username'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button type="button" onclick="toggleEditModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">Abbrechen</button>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleNewTaskModal() {
+        const modal = document.getElementById('newTaskModal');
+        modal.classList.toggle('hidden');
+    }
+
+    function toggleEditModal() {
+        const modal = document.getElementById('editTaskModal');
+        modal.classList.toggle('hidden');
+    }
+
+    document.getElementById('newTaskForm').addEventListener('submit', function(event) {
+        const assignedTo = document.getElementById('assigned_to');
+        if (!assignedTo.value) {
+            event.preventDefault();
+            alert('Bitte wählen Sie ein Teammitglied aus.');
+        }
+    });
+
+    function openEditModal(taskId, title, description, status, priority, dueDate, assignedToId) {
+        document.getElementById('edit_task_id').value = taskId;
+        document.getElementById('edit_title').value = title;
+        document.getElementById('edit_description').value = description;
+        document.getElementById('edit_status').value = status;
+        document.getElementById('edit_priority').value = priority;
+        document.getElementById('edit_due_date').value = dueDate;
+        document.getElementById('edit_assigned_to').value = assignedToId;
+
+        const form = document.getElementById('editTaskForm');
+        form.action = `/tasks/${taskId}/edit`;
+
+        toggleEditModal();
+    }
+
+    document.getElementById('editTaskForm').addEventListener('submit', function(event) {
+        const assignedTo = document.getElementById('edit_assigned_to');
+        if (!assignedTo.value) {
+            event.preventDefault();
+            alert('Bitte wählen Sie ein Teammitglied aus.');
+        }
+    });
+</script>
+{% endblock %}

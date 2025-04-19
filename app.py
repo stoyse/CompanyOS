@@ -4,8 +4,9 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from auth import login_user, register_user, User
 from flask_login import login_required, LoginManager, UserMixin, current_user
 from flask_socketio import SocketIO, emit, join_room, leave_room
-from db import save_message, get_messages_between
+from db import save_message, get_messages_between, delete_task, update_task_status, update_task
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
@@ -43,6 +44,121 @@ def home():
 @login_required
 def ai():
     return render_template('ai.html', username=session.get('username'))
+
+@app.route('/tasks', methods=['GET', 'POST'])
+@login_required
+def tasks():
+    from db import get_all_tasks, get_all_team_members, create_task
+    if request.method == 'POST':
+        title = request.form['title']
+        description = request.form['description']
+        status = request.form['status']
+        priority = request.form['priority']
+        due_date = request.form['due_date']
+        assigned_to = request.form.get('assigned_to')
+        print(f"Form data received: title={title}, description={description}, status={status}, priority={priority}, due_date={due_date}, assigned_to={assigned_to}")
+        print(f"Assigned to received: {assigned_to}")
+        if not assigned_to:
+            flash('Bitte wählen Sie ein Teammitglied aus.', 'danger')
+            return redirect(url_for('tasks'))
+        try:
+            assigned_to = int(assigned_to) if assigned_to else None
+            create_task(title, description, status, priority, due_date, assigned_to)
+            flash('Aufgabe erfolgreich erstellt!', 'success')
+        except ValueError:
+            print("Invalid assigned_to value. It must be an integer.")
+            flash('Ungültige Zuweisung. Bitte wählen Sie ein gültiges Teammitglied aus.', 'danger')
+        except Exception as e:
+            print(f"Error while creating task: {e}")
+            flash('Fehler beim Erstellen der Aufgabe.', 'danger')
+        return redirect(url_for('tasks'))
+
+    tasks_raw = get_all_tasks()
+    team_members = get_all_team_members()
+
+    tasks_processed = []
+    conn = None
+    try:
+        from db import get_db_connection
+        conn = get_db_connection()
+        for task_dict in tasks_raw:
+            task = dict(task_dict)
+            if 'assigned_to_id' not in task or task['assigned_to_id'] is None:
+                task_details = conn.execute('SELECT assigned_to FROM tasks WHERE id = ?', (task['id'],)).fetchone()
+                if task_details:
+                    task['assigned_to_id'] = task_details['assigned_to']
+                else:
+                    task['assigned_to_id'] = None
+            tasks_processed.append(task)
+    except Exception as e:
+        print(f"Error processing tasks to add assigned_to_id: {e}")
+        tasks_processed = [dict(t) for t in tasks_raw]
+    finally:
+        if conn:
+            conn.close()
+
+    print("Tasks being passed to template:", tasks_processed)
+    return render_template('tasks.html', tasks=tasks_processed, team_members=team_members, username=session.get('username'))
+
+@app.route('/tasks/<int:task_id>/edit', methods=['POST'])
+@login_required
+def edit_task(task_id):
+    from db import update_task
+    if request.method == 'POST':
+        title = request.form.get('title')
+        description = request.form.get('description')
+        status = request.form.get('status')
+        priority = request.form.get('priority')
+        due_date_str = request.form.get('due_date')
+        assigned_to = request.form.get('assigned_to')
+
+        print(f"Received edit data for task {task_id}: title={title}, desc={description}, status={status}, prio={priority}, due={due_date_str}, assigned={assigned_to}")
+
+        if not all([title, description, status, priority, due_date_str, assigned_to]):
+            flash('Alle Felder müssen ausgefüllt sein.', 'danger')
+            return redirect(url_for('tasks'))
+
+        try:
+            due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else None
+        except ValueError:
+            flash('Ungültiges Datumsformat.', 'danger')
+            return redirect(url_for('tasks'))
+
+        if update_task(task_id, title, description, status, priority, due_date, assigned_to):
+            flash('Aufgabe erfolgreich aktualisiert!', 'success')
+        else:
+            flash('Fehler beim Aktualisieren der Aufgabe.', 'danger')
+
+        return redirect(url_for('tasks'))
+    else:
+        return redirect(url_for('tasks'))
+
+@app.route('/tasks/<int:task_id>/delete', methods=['POST'])
+@login_required
+def delete_task_route(task_id):
+    from db import delete_task as db_delete_task
+    print(f"Attempting to delete task with id: {task_id}")
+    try:
+        db_delete_task(task_id)
+        flash('Aufgabe erfolgreich gelöscht!', 'success')
+    except Exception as e:
+        print(f"Error deleting task: {e}")
+        flash('Fehler beim Löschen der Aufgabe.', 'danger')
+    return redirect(url_for('tasks'))
+
+@app.route('/tasks/<int:task_id>/update_status', methods=['POST'])
+@login_required
+def update_task_status_route(task_id):
+    from db import update_task_status as db_update_task_status
+    new_status = request.form.get('status')
+    print(f"Attempting to update status for task {task_id} to {new_status}")
+    try:
+        db_update_task_status(task_id, new_status)
+        flash('Status erfolgreich aktualisiert!', 'success')
+    except Exception as e:
+        print(f"Error updating task status: {e}")
+        flash('Fehler beim Aktualisieren des Status.', 'danger')
+    return redirect(url_for('tasks'))
 
 @app.route('/team', methods=['GET'])
 @login_required
@@ -209,6 +325,16 @@ def download_chat_file(filename):
     except FileNotFoundError:
         flash('File not found.', 'danger')
         return redirect(request.referrer or url_for('home'))
+
+@app.route('/profile')
+@login_required
+def profile():
+    from db import get_user_profile
+    user_profile = get_user_profile(current_user.username)
+    if not user_profile:
+        flash('Profilinformationen konnten nicht geladen werden.', 'danger')
+        return redirect(url_for('home'))
+    return render_template('profile.html', profile=user_profile, username=current_user.username)
 
 @socketio.on('connect')
 @login_required
